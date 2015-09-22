@@ -13,6 +13,7 @@
 #include "esp8266_peri.h"
 
 #define NUM_LEDS 4
+#define BOUNCING_TIME 10
 
 /********************************************
  ***     ____________________________     ***
@@ -93,8 +94,7 @@ private:
 private:
     void (*_buttonCallback)(int, bool);
 
-    bool _buttonsBouncing[8];
-    int _bouncingTime[8];
+    int _bounceCounter[8];
     bool _buttons[8];
     byte _leds[NUM_LEDS * 3];
 };

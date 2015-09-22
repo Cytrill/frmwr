@@ -48,6 +48,11 @@ void sendPacket(char *packet)
     udp.endPacket();
 }
 
+void sendChange(int buttonStates)
+{
+    char cmd[] = { 0xF0, char(buttonStates & 0xFF) };
+}
+
 void setup()
 {
     Serial.begin(115200);
@@ -58,5 +63,16 @@ void setup()
 
 void loop()
 {
+    static int buttonStates = 0x00;
+
+    int newButtonStates = Cytrill.getButtons();
+
+    if (newButtonStates != buttonStates)
+    {
+        sendChange(newButtonStates);
+
+        buttonStates = newButtonStates;
+    }
+
     Cytrill.loop();
 }

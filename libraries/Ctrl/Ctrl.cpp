@@ -2,8 +2,7 @@
 
 Ctrl::Ctrl()
     : _buttonCallback(NULL),
-      _buttonsBouncing{ false, },
-      _bouncingTime{ 0, },
+      _bounceCounter{ 0, },
       _buttons{ false, },
       _leds{ 0, }
 {
@@ -108,6 +107,22 @@ void Ctrl::loop()
     int btnUp, btnRight, btnDown, btnLeft;
     int btnX, btnA, btnB, btnY;
 
+    int adcValue = analogRead(A0);
+
+    const float adcMax = 1.0f;
+    const float vCC = 3.3f;
+    const float r0 = 2500;
+    const float r1 = 87000;
+
+    float vADC = adcMax / float(adcValue);
+
+    int i = int((r1 * adcValue) / (r0 * (vCC - vADC)) + 0.5f);
+
+    btnUp = (i & 0x01) ? HIGH : LOW;
+    btnRight = (i & 0x04) ? HIGH : LOW;
+    btnDown = (i & 0x08) ? HIGH : LOW;
+    btnLeft = (i & 0x02) ? HIGH : LOW;
+
     btnX = digitalRead(BTN_X_PIN);
     btnA = digitalRead(BTN_A_PIN);
     btnB = digitalRead(BTN_B_PIN);
@@ -125,31 +140,25 @@ void Ctrl::loop()
 
 void Ctrl::debounceButton(int button, int newValue)
 {
-    if (getButton(button) != (newValue == HIGH) &&
-        !_buttonsBouncing[button])
+    bool newState = (newValue == HIGH);
+
+    if (getButton(button) != newState &&
+        _bounceCounter[button] != 0)
     {
-        _buttonsBouncing[button] = true;
-        _bouncingTime[button] = 0;
+        _bounceCounter[button] = BOUNCING_TIME;
     }
-    else if (_buttonsBouncing[button])
+    else
     {
-        if (_bouncingTime[button] < 100)
-        {
-            _bouncingTime[button]++;
-        }
-        else
-        {
-            _buttonsBouncing[button] = false;
+        _bounceCounter[button] = max(1, _bounceCounter[button]) - 1;
+    }
 
-            if (getButton(button) != (newValue == HIGH))
-            {
-                _buttons[button] = (newValue == HIGH);
+    if (_bounceCounter[button] == 1)
+    {
+        _buttons[button] = newState;
 
-                if (_buttonCallback != NULL)
-                {
-                    _buttonCallback(button, newValue);
-                }
-            }
+        if (_buttonCallback != NULL)
+        {
+            _buttonCallback(button, newState);
         }
     }
 }
