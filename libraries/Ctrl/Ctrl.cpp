@@ -87,3 +87,5 @@ void Ctrl::setLeds(byte leds[])
 void Ctrl::loop()
 {
 }
+
+Ctrl Cytrill;

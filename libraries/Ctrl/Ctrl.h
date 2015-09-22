@@ -64,4 +64,6 @@ private:
     byte _leds[NUM_LEDS * 3];
 };
 
+extern Ctrl Cytrill;
+
 #endif

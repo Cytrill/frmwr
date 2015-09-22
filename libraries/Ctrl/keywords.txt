@@ -1,0 +1,26 @@
+#######################################
+# Syntax Coloring Map For Ultrasound
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+Cytrill	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+begin 	KEYWORD2
+end 	KEYWORD2
+registerButtonCallback 	KEYWORD2
+getButton 	KEYWORD2
+setLed 	KEYWORD2
+setLeds 	KEYWORD2
+loop 	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
