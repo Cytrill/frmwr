@@ -111,8 +111,8 @@ void Ctrl::loop()
 
     const float adcMax = 1.0f;
     const float vCC = 3.3f;
-    const float r0 = 2500;
-    const float r1 = 87000;
+    const float r0 = 2500.0f;
+    const float r1 = 87000.0f;
 
     float vADC = adcMax / float(adcValue);
 

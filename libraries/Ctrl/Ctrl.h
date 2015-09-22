@@ -45,17 +45,6 @@
 #define BTN_B_MASK     0x40
 #define BTN_Y_MASK     0x80
 
-const int BTN_MASKS[8] = {
-    BTN_UP_MASK,
-    BTN_RIGHT_MASK,
-    BTN_DOWN_MASK,
-    BTN_LEFT_MASK,
-    BTN_X_MASK,
-    BTN_A_MASK,
-    BTN_B_MASK,
-    BTN_Y_MASK
-};
-
 #define LED_0          0
 #define LED_1          1
 #define LED_2          2
