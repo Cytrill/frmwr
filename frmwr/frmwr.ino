@@ -2,6 +2,17 @@
 #include "Ctrl.h"
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
+#include <Ticker.h>
+
+#define CMD_KEEP_ALIVE      0x10
+#define CMD_BUTTONS_CHANGED 0x11
+
+#define CMD_SET_LED_0       0x20
+#define CMD_SET_LED_1       0x21
+#define CMD_SET_LED_2       0x22
+#define CMD_SET_LED_3       0x23
+
+#define KEEP_ALIVE_INTERVAL 5.0
 
 #define DEBUG
 
@@ -13,6 +24,8 @@ const int gamePort = 1337;
 
 WiFiClient client;
 WiFiUDP udp;
+
+int buttonStates = 0x00;
 
 void setupWifi()
 {
@@ -41,21 +54,51 @@ void setupWifi()
     udp.begin(gamePort);
 }
 
-void sendPacket(char *packet)
+void sendMessage(char message[])
 {
+#ifdef DEBUG
+    Serial.print("Sending data: ");
+    Serial.write(message, 5);
+    Serial.println();
+#endif
+
     udp.beginPacket(gameServer, gamePort);
-    udp.write(packet);
+    udp.write(message, 5);
     udp.endPacket();
 }
 
-void sendChange(int buttonStates)
+void sendButtonsChanged(int newButtonStates)
 {
-    char cmd[] = { 0xF0, char(buttonStates & 0xFF) };
+    char message[] = {
+        CMD_BUTTONS_CHANGED,
+        char(newButtonStates & 0xFF),
+        char((newButtonStates ^ buttonStates) & 0xFF),
+        0x00,
+        CMD_BUTTONS_CHANGED
+    };
+
+    sendMessage(message);
+}
+
+void sendKeepAlive()
+{
+    char message[] = {
+        CMD_KEEP_ALIVE,
+        char(buttonStates & 0xFF),
+        0x00,
+        0x00,
+        CMD_KEEP_ALIVE
+    };
+
+    sendMessage(message);
 }
 
 void setup()
 {
+#ifdef DEBUG
     Serial.begin(115200);
+#endif
+
     Cytrill.begin();
     
     setupWifi();
@@ -63,16 +106,28 @@ void setup()
 
 void loop()
 {
-    static int buttonStates = 0x00;
-
+    static int keepAliveCounter = 0;
+    
     int newButtonStates = Cytrill.getButtons();
 
     if (newButtonStates != buttonStates)
     {
-        sendChange(newButtonStates);
+        sendButtonsChanged(newButtonStates);
 
         buttonStates = newButtonStates;
     }
+
+    if (keepAliveCounter == 2000)
+    {
+        sendKeepAlive();
+        keepAliveCounter = 0;
+    }
+    else
+    {
+        keepAliveCounter++;
+    }
+
+    delay(2);
 
     Cytrill.loop();
 }

@@ -25,15 +25,15 @@
  ***                                      ***
  ********************************************/
 
-#define BTN_UP         0x01
-#define BTN_RIGHT      0x02
-#define BTN_DOWN       0x04
-#define BTN_LEFT       0x08
+#define BTN_UP         0
+#define BTN_RIGHT      1
+#define BTN_DOWN       2
+#define BTN_LEFT       3
 
-#define BTN_X          0x10
-#define BTN_A          0x20
-#define BTN_B          0x40
-#define BTN_Y          0x80
+#define BTN_X          4
+#define BTN_A          5
+#define BTN_B          6
+#define BTN_Y          7
 
 #define BTN_UP_MASK    0x01
 #define BTN_RIGHT_MASK 0x02

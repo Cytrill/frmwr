@@ -109,24 +109,46 @@ void Ctrl::loop()
 
     int adcValue = analogRead(A0);
 
-    const float adcMax = 1.0f;
+    const float vADCMax = 1.0f;
     const float vCC = 3.3f;
     const float r0 = 2500.0f;
     const float r1 = 87000.0f;
 
-    float vADC = adcMax / float(adcValue);
+    float vADC = float(adcValue) * (vADCMax / 1024.0f);
 
-    int i = int((r1 * adcValue) / (r0 * (vCC - vADC)) + 0.5f);
+    int i = int((r1 * vADC) / (r0 * (vCC - vADC)) + 0.5f);
 
-    btnUp = (i & 0x01) ? HIGH : LOW;
-    btnRight = (i & 0x04) ? HIGH : LOW;
-    btnDown = (i & 0x08) ? HIGH : LOW;
-    btnLeft = (i & 0x02) ? HIGH : LOW;
+    btnUp = (i & 0x01) ? LOW : HIGH;
+    btnRight = (i & 0x04) ? LOW : HIGH;
+    btnDown = (i & 0x08) ? LOW : HIGH;
+    btnLeft = (i & 0x02) ? LOW : HIGH;
+
+#ifdef BTN_DEBUG
+    Serial.print("BTN_UP: ");
+    Serial.println(btnUp);
+    Serial.print("BTN_RIGHT: ");
+    Serial.println(btnRight);
+    Serial.print("BTN_DOWN: ");
+    Serial.println(btnDown);
+    Serial.print("BTN_LEFT: ");
+    Serial.println(btnLeft);
+#endif
 
     btnX = digitalRead(BTN_X_PIN);
     btnA = digitalRead(BTN_A_PIN);
     btnB = digitalRead(BTN_B_PIN);
     btnY = digitalRead(BTN_Y_PIN);
+
+#ifdef BTN_DEBUG
+    Serial.print("BTN_X: ");
+    Serial.println(btnX);
+    Serial.print("BTN_A: ");
+    Serial.println(btnA);
+    Serial.print("BTN_B: ");
+    Serial.println(btnB);
+    Serial.print("BTN_Y: ");
+    Serial.println(btnY);
+#endif
 
     debounceButton(BTN_UP, btnX);
     debounceButton(BTN_RIGHT, btnA);
@@ -143,7 +165,7 @@ void Ctrl::debounceButton(int button, int newValue)
     bool newState = (newValue == HIGH);
 
     if (getButton(button) != newState &&
-        _bounceCounter[button] != 0)
+        _bounceCounter[button] == 0)
     {
         _bounceCounter[button] = BOUNCING_TIME;
     }
