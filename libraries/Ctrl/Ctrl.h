@@ -47,8 +47,6 @@
 
 #define LED_0          0
 #define LED_1          1
-#define LED_2          2
-#define LED_3          3
 
 #define ADC_PIN        A0
 
