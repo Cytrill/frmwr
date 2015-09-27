@@ -73,14 +73,14 @@ bool Ctrl::getButton(int button)
 
 int Ctrl::getButtons()
 {
-    return _buttons[BTN_UP] ? BTN_UP_MASK : 0x00  ||
-           _buttons[BTN_RIGHT] ? BTN_RIGHT_MASK : 0x00 ||
-           _buttons[BTN_DOWN] ? BTN_DOWN_MASK : 0x00 ||
-           _buttons[BTN_LEFT] ? BTN_LEFT_MASK : 0x00 ||
-           _buttons[BTN_X] ? BTN_X_MASK : 0x00 ||
-           _buttons[BTN_A] ? BTN_A_MASK : 0x00 ||
-           _buttons[BTN_B] ? BTN_B_MASK : 0x00 ||
-           _buttons[BTN_Y] ? BTN_Y_MASK : 0x00;
+    return (_buttons[BTN_UP] ? BTN_UP_MASK : 0x00) |
+           (_buttons[BTN_RIGHT] ? BTN_RIGHT_MASK : 0x00) |
+           (_buttons[BTN_DOWN] ? BTN_DOWN_MASK : 0x00) |
+           (_buttons[BTN_LEFT] ? BTN_LEFT_MASK : 0x00) |
+           (_buttons[BTN_X] ? BTN_X_MASK : 0x00) |
+           (_buttons[BTN_A] ? BTN_A_MASK : 0x00) |
+           (_buttons[BTN_B] ? BTN_B_MASK : 0x00) |
+           (_buttons[BTN_Y] ? BTN_Y_MASK : 0x00);
 }
 
 void Ctrl::setLed(int led, byte r, byte g, byte b)
@@ -110,18 +110,19 @@ void Ctrl::loop()
     int adcValue = analogRead(A0);
 
     const float vADCMax = 1.0f;
+    const float adcValueMax = 959.f;
     const float vCC = 3.3f;
     const float r0 = 2500.0f;
     const float r1 = 87000.0f;
 
-    float vADC = float(adcValue) * (vADCMax / 1024.0f);
+    float vADC = float(adcValue) * (vADCMax / adcValueMax);
 
     int i = int((r1 * vADC) / (r0 * (vCC - vADC)) + 0.5f);
 
-    btnUp = (i & 0x01) ? LOW : HIGH;
-    btnRight = (i & 0x04) ? LOW : HIGH;
-    btnDown = (i & 0x08) ? LOW : HIGH;
-    btnLeft = (i & 0x02) ? LOW : HIGH;
+    btnUp = bool(i & 0x01) ? LOW : HIGH;
+    btnRight = bool(i & 0x04) ? LOW : HIGH;
+    btnDown = bool(i & 0x08) ? LOW : HIGH;
+    btnLeft = bool(i & 0x02) ? LOW : HIGH;
 
 #ifdef BTN_DEBUG
     Serial.print("BTN_UP: ");
@@ -150,10 +151,10 @@ void Ctrl::loop()
     Serial.println(btnY);
 #endif
 
-    debounceButton(BTN_UP, btnX);
-    debounceButton(BTN_RIGHT, btnA);
-    debounceButton(BTN_DOWN, btnB);
-    debounceButton(BTN_LEFT, btnY);
+    debounceButton(BTN_UP, btnUp);
+    debounceButton(BTN_RIGHT, btnRight);
+    debounceButton(BTN_DOWN, btnDown);
+    debounceButton(BTN_LEFT, btnLeft);
     debounceButton(BTN_X, btnX);
     debounceButton(BTN_A, btnA);
     debounceButton(BTN_B, btnB);
@@ -162,7 +163,7 @@ void Ctrl::loop()
 
 void Ctrl::debounceButton(int button, int newValue)
 {
-    bool newState = (newValue == HIGH);
+    bool newState = (newValue == LOW);
 
     if (getButton(button) != newState &&
         _bounceCounter[button] == 0)

@@ -121,13 +121,24 @@ void loop()
     {
         sendKeepAlive();
         keepAliveCounter = 0;
+
+        Serial.print(Cytrill.getButtons(), BIN);
+        Serial.println();
+
+        Serial.println("Sending Keep alive");
     }
     else
     {
         keepAliveCounter++;
     }
 
-    delay(2);
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        Serial.println("Lost wifi connection");
+    }
+
+    delay(3);
 
     Cytrill.loop();
 }
+
