@@ -12,7 +12,7 @@
 #include "SPI.h"
 #include "esp8266_peri.h"
 
-#define NUM_LEDS 4
+#define NUM_LEDS 2
 #define BOUNCING_TIME 10
 
 /********************************************
@@ -70,7 +70,7 @@ public:
     bool getButton(int);
     int getButtons();
 
-    void setLed(int, byte, byte, byte);
+    void setLed(int, byte, byte, byte, byte);
     void setLeds(byte[]);
 
     void loop();
@@ -79,11 +79,14 @@ private:
     void debounceButton(int, int);
 
 private:
+    byte APA102_START_FRAME[4] = { 0x00, };
+    byte APA102_END_FRAME[4] = { 0xFF, };
+
     void (*_buttonCallback)(int, bool);
 
     int _bounceCounter[8];
     bool _buttons[8];
-    byte _leds[NUM_LEDS * 3];
+    byte _leds[NUM_LEDS * 4];
 };
 
 extern Ctrl Cytrill;

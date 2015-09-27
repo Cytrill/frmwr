@@ -9,10 +9,10 @@
 
 #define CMD_SET_LED_0       0x20
 #define CMD_SET_LED_1       0x21
-#define CMD_SET_LED_2       0x22
-#define CMD_SET_LED_3       0x23
 
-#define KEEP_ALIVE_INTERVAL 5.0
+#define MSG_SIZE            6
+
+#define KEEP_ALIVE_INTERVAL 2000
 
 #define DEBUG
 
@@ -50,20 +50,18 @@ void setupWifi()
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
 #endif
-  
-    udp.begin(gamePort);
 }
 
 void sendMessage(char message[])
 {
 #ifdef DEBUG
     Serial.print("Sending data: ");
-    Serial.write(message, 5);
+    Serial.write(message, MSG_SIZE);
     Serial.println();
 #endif
 
     udp.beginPacket(gameServer, gamePort);
-    udp.write(message, 5);
+    udp.write(message, MSG_SIZE);
     udp.endPacket();
 }
 
@@ -73,6 +71,7 @@ void sendButtonsChanged(int newButtonStates)
         CMD_BUTTONS_CHANGED,
         char(newButtonStates & 0xFF),
         char((newButtonStates ^ buttonStates) & 0xFF),
+        0x00,
         0x00,
         CMD_BUTTONS_CHANGED
     };
@@ -87,10 +86,25 @@ void sendKeepAlive()
         char(buttonStates & 0xFF),
         0x00,
         0x00,
+        0x00,
         CMD_KEEP_ALIVE
     };
 
     sendMessage(message);
+}
+
+bool receiveMessage(char *buffer)
+{
+    int size = udp.parsePacket();
+
+    if (size == MSG_SIZE)
+    {
+        udp.read(buffer, MSG_SIZE);
+
+        return true;
+    }
+
+    return false;
 }
 
 void setup()
@@ -102,13 +116,33 @@ void setup()
     Cytrill.begin();
     
     setupWifi();
+    udp.begin(gamePort);
 }
 
 void loop()
 {
     static int keepAliveCounter = 0;
-    
+
+    char msgBuffer[MSG_SIZE] = { 0x00, };
     int newButtonStates = Cytrill.getButtons();
+
+    if (receiveMessage(msgBuffer))
+    {
+        // Some sanity check
+        if (msgBuffer[0] == msgBuffer[MSG_SIZE - 1])
+        {
+            switch (msgBuffer[0])
+            {
+                case CMD_SET_LED_0:
+                    Cytrill.setLed(LED_0, msgBuffer[1], msgBuffer[2], msgBuffer[3], msgBuffer[4]);
+                    break;
+
+                case CMD_SET_LED_1:
+                    Cytrill.setLed(LED_1, msgBuffer[1], msgBuffer[2], msgBuffer[3], msgBuffer[4]);
+                    break;
+            }
+        }
+    }
 
     if (newButtonStates != buttonStates)
     {
@@ -117,15 +151,10 @@ void loop()
         buttonStates = newButtonStates;
     }
 
-    if (keepAliveCounter == 2000)
+    if (keepAliveCounter == KEEP_ALIVE_INTERVAL)
     {
         sendKeepAlive();
         keepAliveCounter = 0;
-
-        Serial.print(Cytrill.getButtons(), BIN);
-        Serial.println();
-
-        Serial.println("Sending Keep alive");
     }
     else
     {
@@ -134,9 +163,10 @@ void loop()
 
     if (WiFi.status() != WL_CONNECTED)
     {
-        Serial.println("Lost wifi connection");
+        setupWifi();
     }
 
+    // Necessary for some reason
     delay(3);
 
     Cytrill.loop();

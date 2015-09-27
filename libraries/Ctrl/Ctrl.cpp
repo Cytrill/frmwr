@@ -4,7 +4,7 @@ Ctrl::Ctrl()
     : _buttonCallback(NULL),
       _bounceCounter{ 0, },
       _buttons{ false, },
-      _leds{ 0, }
+      _leds{ 0x00, }
 {
 }
 
@@ -20,40 +20,49 @@ void Ctrl::begin()
 void Ctrl::begin(int frequency)
 {
     // SPI
-    SPI.begin ();  
+    SPI.begin();
 
     // reset the pin mode of MISO, we use it as input
-    SPI.setBitOrder (MSBFIRST);
-    SPI.setDataMode (0);
-    SPI.setFrequency (frequency);
+    SPI.setBitOrder(MSBFIRST);
+    SPI.setDataMode(0);
+    SPI.setFrequency(frequency);
 
-    SPI.writePattern (_leds, sizeof (_leds), 0x00);
+    delay(5);
+
+    for (int i = 0; i < NUM_LEDS; i++)
+    {
+        _leds[i * 4] = 0xE0;
+    }
+
+    SPI.writeBytes(APA102_START_FRAME, sizeof (APA102_START_FRAME));
+    SPI.writeBytes(_leds, sizeof (_leds));
+    SPI.writeBytes(APA102_END_FRAME, sizeof (APA102_END_FRAME));
 
     // relevant for boot mode, needs pullup on startup for flash boot
-    pinMode (BTN_B_PIN, INPUT_PULLUP);
+    pinMode(BTN_B_PIN, INPUT_PULLUP);
 
     // UART0 TX. Use for serial tx. Also for the builtin LED.
     // pinMode (1, SPECIAL);
     //
     // UART1 TX during flash programming, no external pullup!
-    pinMode (BTN_X_PIN, INPUT_PULLUP);
+    pinMode(BTN_X_PIN, INPUT_PULLUP);
 
     // UART0 RX. Use for serial rx
     // pinMode (3, SPECIAL);
 
-    pinMode (BTN_A_PIN, INPUT_PULLUP);
-    pinMode (BTN_Y_PIN, INPUT_PULLUP);
+    pinMode(BTN_A_PIN, INPUT_PULLUP);
+    pinMode(BTN_Y_PIN, INPUT_PULLUP);
 
     // 6:
 
     // this overrides SPI MISO which we don't use
-    pinMode (12, INPUT_PULLUP);
+    pinMode(12, INPUT_PULLUP);
 
     // 13: SPI MOSI, we use it for the LEDs, might possibly be used for a button with series resistor as well.
     // 14: SPI CLK, we use it for the LEDs
 
     // relevant for boot mode, needs Pulldown on startup
-    pinMode (15, INPUT_PULLUP);
+    pinMode(15, INPUT_PULLUP);
 }
 
 void Ctrl::end()
@@ -83,23 +92,28 @@ int Ctrl::getButtons()
            (_buttons[BTN_Y] ? BTN_Y_MASK : 0x00);
 }
 
-void Ctrl::setLed(int led, byte r, byte g, byte b)
+void Ctrl::setLed(int led, byte red, byte green, byte blue, byte brightness)
 {
     if (led < NUM_LEDS)
     {
-        _leds[led * 3] = r;
-        _leds[led * 3 + 1] = g;
-        _leds[led * 3 + 2] = b;
+        _leds[led * 4] = brightness | 0xE0;
+        _leds[led * 4 + 1] = blue;
+        _leds[led * 4 + 2] = green;
+        _leds[led * 4 + 3] = red;
     }
 
+    SPI.writeBytes(APA102_START_FRAME, sizeof (APA102_START_FRAME));
     SPI.writeBytes(_leds, sizeof(_leds));
+    SPI.writeBytes(APA102_END_FRAME, sizeof (APA102_END_FRAME));
 }
 
 void Ctrl::setLeds(byte leds[])
 {
     memcpy(_leds, leds, NUM_LEDS);
 
+    SPI.writeBytes(APA102_START_FRAME, sizeof (APA102_START_FRAME));
     SPI.writeBytes(_leds, sizeof(_leds));
+    SPI.writeBytes(APA102_END_FRAME, sizeof (APA102_END_FRAME));
 }
 
 void Ctrl::loop()
