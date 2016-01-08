@@ -133,10 +133,10 @@ void Ctrl::loop()
 
     int i = int((r1 * vADC) / (r0 * (vCC - vADC)) + 0.5f);
 
-    btnUp = bool(i & 0x01) ? LOW : HIGH;
-    btnRight = bool(i & 0x04) ? LOW : HIGH;
-    btnDown = bool(i & 0x08) ? LOW : HIGH;
-    btnLeft = bool(i & 0x02) ? LOW : HIGH;
+    btnUp = bool(i & 0x01) ? HIGH : LOW;
+    btnRight = bool(i & 0x04) ? HIGH : LOW;
+    btnDown = bool(i & 0x08) ? HIGH : LOW;
+    btnLeft = bool(i & 0x02) ? HIGH : LOW;
 
 #ifdef BTN_DEBUG
     Serial.print("BTN_UP: ");
