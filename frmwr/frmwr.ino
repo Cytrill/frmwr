@@ -2,7 +2,6 @@
 #include "Ctrl.h"
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
-#include <Ticker.h>
 
 #define CMD_KEEP_ALIVE      0x10
 #define CMD_BUTTONS_CHANGED 0x11
@@ -15,11 +14,12 @@
 #define KEEP_ALIVE_INTERVAL 2000
 
 #define DEBUG
+#define BTN_DEBUG
 
 const char *ssid     = "HaSi-Kein-Internet-Legacy";
 const char *password = "bugsbunny";
 
-const char *gameServer = "10.23.42.176";
+const char *gameServer = "10.23.42.168";
 const int gamePort = 1337;
 
 WiFiClient client;
@@ -101,9 +101,9 @@ bool receiveMessage(char *buffer)
     {
         udp.read(buffer, MSG_SIZE);
 
-        return true;
+       return true;
     }
-
+    
     return false;
 }
 
@@ -117,6 +117,9 @@ void setup()
     
     setupWifi();
     udp.begin(gamePort);
+
+    Cytrill.setLed(LED_0, 0x00, 0x00, 0x00, 31);
+    Cytrill.setLed(LED_1, 0x00, 0x00, 0x00, 31);
 }
 
 void loop()

@@ -45,8 +45,8 @@
 #define BTN_B_MASK     0x40
 #define BTN_Y_MASK     0x80
 
-#define LED_0          0
-#define LED_1          1
+#define LED_0          1
+#define LED_1          0
 
 #define ADC_PIN        A0
 

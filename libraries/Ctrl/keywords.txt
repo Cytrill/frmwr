@@ -1,8 +1,4 @@
 #######################################
-# Syntax Coloring Map For Ultrasound
-#######################################
-
-#######################################
 # Datatypes (KEYWORD1)
 #######################################
 
@@ -47,5 +43,3 @@ BTN_Y_MASK 	LITERAL1
 
 LED_0 	LITERAL1
 LED_1 	LITERAL1
-LED_2 	LITERAL1
-LED_3 	LITERAL1

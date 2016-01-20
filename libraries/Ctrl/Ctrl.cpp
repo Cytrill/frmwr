@@ -109,7 +109,7 @@ void Ctrl::setLed(int led, byte red, byte green, byte blue, byte brightness)
 
 void Ctrl::setLeds(byte leds[])
 {
-    memcpy(_leds, leds, NUM_LEDS);
+    memcpy(_leds, leds, sizeof(_leds));
 
     SPI.writeBytes(APA102_START_FRAME, sizeof (APA102_START_FRAME));
     SPI.writeBytes(_leds, sizeof(_leds));
@@ -124,7 +124,7 @@ void Ctrl::loop()
     int adcValue = analogRead(A0);
 
     const float vADCMax = 1.0f;
-    const float adcValueMax = 959.f;
+    const float adcValueMax = 1024.f;
     const float vCC = 3.3f;
     const float r0 = 2500.0f;
     const float r1 = 87000.0f;
@@ -133,36 +133,51 @@ void Ctrl::loop()
 
     int i = int((r1 * vADC) / (r0 * (vCC - vADC)) + 0.5f);
 
-    btnUp = bool(i & 0x01) ? HIGH : LOW;
-    btnRight = bool(i & 0x04) ? HIGH : LOW;
-    btnDown = bool(i & 0x08) ? HIGH : LOW;
-    btnLeft = bool(i & 0x02) ? HIGH : LOW;
+    btnUp = bool(i & 0x01) ? LOW : HIGH;
+    btnRight = bool(i & 0x04) ? LOW : HIGH;
+    btnDown = bool(i & 0x08) ? LOW : HIGH;
+    btnLeft = bool(i & 0x02) ? LOW : HIGH;
 
 #ifdef BTN_DEBUG
-    Serial.print("BTN_UP: ");
-    Serial.println(btnUp);
-    Serial.print("BTN_RIGHT: ");
-    Serial.println(btnRight);
-    Serial.print("BTN_DOWN: ");
-    Serial.println(btnDown);
-    Serial.print("BTN_LEFT: ");
-    Serial.println(btnLeft);
+    static int debugCounter = 0;
+    debugCounter++;
+
+    if (debugCounter > 500)
+    {
+        Serial.print("BTN_UP: ");
+        Serial.println(btnUp);
+        Serial.print("BTN_RIGHT: ");
+        Serial.println(btnRight);
+        Serial.print("BTN_DOWN: ");
+        Serial.println(btnDown);
+        Serial.print("BTN_LEFT: ");
+        Serial.println(btnLeft);
+        Serial.println();
+
+        debugCounter = 0;
+    }
 #endif
 
-    btnX = digitalRead(BTN_X_PIN);
-    btnA = digitalRead(BTN_A_PIN);
-    btnB = digitalRead(BTN_B_PIN);
-    btnY = digitalRead(BTN_Y_PIN);
+    btnX = digitalRead(BTN_X_PIN) ? LOW : HIGH;
+    btnA = digitalRead(BTN_A_PIN) ? LOW : HIGH;
+    btnB = digitalRead(BTN_B_PIN) ? LOW : HIGH;
+    btnY = digitalRead(BTN_Y_PIN) ? LOW : HIGH;
 
 #ifdef BTN_DEBUG
-    Serial.print("BTN_X: ");
-    Serial.println(btnX);
-    Serial.print("BTN_A: ");
-    Serial.println(btnA);
-    Serial.print("BTN_B: ");
-    Serial.println(btnB);
-    Serial.print("BTN_Y: ");
-    Serial.println(btnY);
+    if (debugCounter > 500)
+    {
+        Serial.print("BTN_X: ");
+        Serial.println(btnX);
+        Serial.print("BTN_A: ");
+        Serial.println(btnA);
+        Serial.print("BTN_B: ");
+        Serial.println(btnB);
+        Serial.print("BTN_Y: ");
+        Serial.println(btnY);
+        Serial.println();
+
+        debugCounter = 0;
+    }
 #endif
 
     debounceButton(BTN_UP, btnUp);
@@ -177,7 +192,7 @@ void Ctrl::loop()
 
 void Ctrl::debounceButton(int button, int newValue)
 {
-    bool newState = (newValue == LOW);
+    bool newState = (newValue == HIGH);
 
     if (getButton(button) != newState &&
         _bounceCounter[button] == 0)
