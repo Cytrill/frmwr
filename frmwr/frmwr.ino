@@ -9,9 +9,11 @@
 #define CMD_SET_LED_0       0x20
 #define CMD_SET_LED_1       0x21
 
+#define CMD_SET_HOST        0x30
+
 #define MSG_SIZE            6
 
-#define KEEP_ALIVE_INTERVAL 2000
+#define KEEP_ALIVE_INTERVAL 4000
 
 #define DEBUG
 #define BTN_DEBUG
@@ -19,7 +21,7 @@
 const char *ssid     = "HaSi-Kein-Internet-Legacy";
 const char *password = "bugsbunny";
 
-const char *gameServer = "10.23.42.168";
+uint32_t gameServer = 0;
 const int gamePort = 1337;
 
 WiFiClient client;
@@ -93,15 +95,20 @@ void sendKeepAlive()
     sendMessage(message);
 }
 
-bool receiveMessage(char *buffer)
+bool receiveMessage(char *buffer, uint32_t *remoteIP)
 {
     int size = udp.parsePacket();
+    *remoteIP = udp.remoteIP();
 
     if (size == MSG_SIZE)
     {
         udp.read(buffer, MSG_SIZE);
 
-       return true;
+        return true;
+    }
+    else if (size > 0)
+    {
+        udp.read(buffer, size);
     }
     
     return false;
@@ -125,11 +132,18 @@ void setup()
 void loop()
 {
     static int keepAliveCounter = 0;
+    
+    if (WiFi.status() == WL_DISCONNECTED)
+    {
+        setupWifi();
+    }
 
     char msgBuffer[MSG_SIZE] = { 0x00, };
+    uint32_t remoteIP = 0;
+    
     int newButtonStates = Cytrill.getButtons();
 
-    if (receiveMessage(msgBuffer))
+    if (receiveMessage(msgBuffer, &remoteIP))
     {
         // Some sanity check
         if (msgBuffer[0] == msgBuffer[MSG_SIZE - 1])
@@ -142,6 +156,13 @@ void loop()
 
                 case CMD_SET_LED_1:
                     Cytrill.setLed(LED_1, msgBuffer[1], msgBuffer[2], msgBuffer[3], msgBuffer[4]);
+                    break;
+
+                case CMD_SET_HOST:
+#ifdef DEBUG
+                    Serial.println("New game server!");
+#endif
+                    gameServer = remoteIP;
                     break;
             }
         }
@@ -164,13 +185,8 @@ void loop()
         keepAliveCounter++;
     }
 
-    if (WiFi.status() != WL_CONNECTED)
-    {
-        setupWifi();
-    }
-
-    // Necessary for some reason
-    delay(3);
+    // Necessary for some reason, value found by empiric studies
+    delayMicroseconds(2500);
 
     Cytrill.loop();
 }

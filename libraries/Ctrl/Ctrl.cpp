@@ -163,6 +163,8 @@ void Ctrl::loop()
     btnB = digitalRead(BTN_B_PIN) ? LOW : HIGH;
     btnY = digitalRead(BTN_Y_PIN) ? LOW : HIGH;
 
+    delay(0);
+
 #ifdef BTN_DEBUG
     if (debugCounter > 500)
     {
