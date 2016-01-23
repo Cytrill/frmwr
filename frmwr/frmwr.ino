@@ -10,6 +10,7 @@
 #define CMD_SET_LED_1       0x21
 
 #define CMD_SET_HOST        0x30
+#define CMD_ASK_HOST        0x31
 
 #define MSG_SIZE            6
 
@@ -54,11 +55,27 @@ void setupWifi()
 #endif
 }
 
+void sendAskHost()
+{
+#ifdef DEBUG
+    Serial.println("Asking for a game server in the network.");
+#endif
+
+    char askHost[] = { CMD_ASK_HOST, 0x00, 0x00, 0x00, 0x00, CMD_ASK_HOST };
+
+    udp.beginPacket("255.255.255.255", gamePort);
+    udp.write(askHost, MSG_SIZE);
+    udp.endPacket();
+}
+
 void sendMessage(char message[])
 {
 #ifdef DEBUG
     Serial.print("Sending data: ");
-    Serial.write(message, MSG_SIZE);
+    for (int i = 0; i < MSG_SIZE; i++)
+    {
+        Serial.print(message[i], HEX); Serial.print(", ");
+    }
     Serial.println();
 #endif
 
@@ -106,10 +123,6 @@ bool receiveMessage(char *buffer, uint32_t *remoteIP)
 
         return true;
     }
-    else if (size > 0)
-    {
-        udp.read(buffer, size);
-    }
     
     return false;
 }
@@ -121,17 +134,19 @@ void setup()
 #endif
 
     Cytrill.begin();
-    
-    setupWifi();
-    udp.begin(gamePort);
 
     Cytrill.setLed(LED_0, 0x00, 0x00, 0x00, 31);
     Cytrill.setLed(LED_1, 0x00, 0x00, 0x00, 31);
+        
+    setupWifi();
+    udp.begin(gamePort);
+
+    sendAskHost();
 }
 
 void loop()
 {
-    static int keepAliveCounter = 0;
+    static int lastKeepAlive = 0;
     
     if (WiFi.status() == WL_DISCONNECTED)
     {
@@ -160,7 +175,12 @@ void loop()
 
                 case CMD_SET_HOST:
 #ifdef DEBUG
-                    Serial.println("New game server!");
+                    Serial.print("New game server: ");
+                    Serial.print((remoteIP >> 24) & 0xFF); Serial.print(".");
+                    Serial.print((remoteIP >> 24) & 0xFF); Serial.print(".");
+                    Serial.print((remoteIP >> 24) & 0xFF); Serial.print(".");
+                    Serial.print(remoteIP & 0xFF);
+                    Serial.println();
 #endif
                     gameServer = remoteIP;
                     break;
@@ -171,18 +191,13 @@ void loop()
     if (newButtonStates != buttonStates)
     {
         sendButtonsChanged(newButtonStates);
-
         buttonStates = newButtonStates;
     }
 
-    if (keepAliveCounter == KEEP_ALIVE_INTERVAL)
+    if (lastKeepAlive - millis() >= KEEP_ALIVE_INTERVAL)
     {
         sendKeepAlive();
-        keepAliveCounter = 0;
-    }
-    else
-    {
-        keepAliveCounter++;
+        lastKeepAlive = millis();
     }
 
     // Necessary for some reason, value found by empiric studies
