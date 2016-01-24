@@ -74,6 +74,7 @@ public:
     void setLeds(byte[]);
 
     void loop();
+    void loop(int);
 
 private:
     void debounceButton(int, int);

@@ -192,6 +192,14 @@ void Ctrl::loop()
     debounceButton(BTN_Y, btnY);
 }
 
+void Ctrl::loop(int count)
+{
+    for (int i = 0; i < count; i++)
+    {
+        Cytrill.loop();
+    }
+}
+
 void Ctrl::debounceButton(int button, int newValue)
 {
     bool newState = (newValue == HIGH);
