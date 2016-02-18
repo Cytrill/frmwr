@@ -18,7 +18,7 @@
 
 #define MSG_SIZE            6
 
-#define MAX_GAME_HOSTS    10
+#define MAX_GAME_HOSTS      10
 
 #define KEEP_ALIVE_INTERVAL 4000
 
@@ -29,8 +29,8 @@ bool configMode = false;
 char essid[ESSID_LENGTH] = "";
 char password[PASSWORD_LENGTH] = "";
 
-String tmpESSID = "";
-String tmpPassword = "";
+char tmpESSID[ESSID_LENGTH] = "";
+char tmpPassword[PASSWORD_LENGTH] = "";
 
 uint32_t currentGameHost = 0;
 const int gamePort = 1337;
@@ -266,6 +266,7 @@ void setup()
 void configureLoop()
 {
   static int mode = 0;
+  static int i = 0;
 
   if (mode == 0)
   {
@@ -284,11 +285,25 @@ void configureLoop()
   }
   else if (mode == 1)
   {
-    tmpESSID = Serial.readString();
-
-    if (strcmp(tmpESSID.c_str(), "") != 0)
+    if (Serial.available())
     {
-      mode = 2;
+      char next = 255;
+      bool readFurther = true;
+
+      do
+      {
+        next = Serial.read();
+        readFurther = next != 0 && next != '\r' && next != '\n';
+        tmpESSID[i] = next;
+        i++;
+      } while (Serial.available() && readFurther);
+
+      if (!readFurther)
+      {
+        tmpESSID[i - 1] = 0;
+        i = 0;
+        mode = 2;
+      }
     }
   }
   else if (mode == 2)
@@ -299,16 +314,30 @@ void configureLoop()
   }
   else if (mode == 3)
   {
-    tmpPassword = Serial.readString();
-
-    if (strcmp(tmpPassword.c_str(), "") != 0)
+    if (Serial.available())
     {
-      mode = 4;
+      char next = 255;
+      bool readFurther = true;
+
+      do
+      {
+        next = Serial.read();
+        readFurther = next != 0 && next != '\r' && next != '\n';
+        tmpPassword[i] = next;
+        i++;
+      } while (Serial.available() && readFurther);
+
+      if (!readFurther)
+      {
+        tmpPassword[i - 1] = 0;
+        i = 0;
+        mode = 4;
+      }
     }
   }
   else if (mode == 4)
   {
-    writeWirelessConfig(tmpESSID.c_str(), tmpPassword.c_str());
+    writeWirelessConfig(tmpESSID, tmpPassword);
 
     Serial.println("Writing config to EEPROM!");
 
@@ -342,7 +371,7 @@ void mainLoop()
     bool newUpState = Cytrill.getButton(BTN_UP);
     bool newDownState = Cytrill.getButton(BTN_DOWN);
     bool newAState = Cytrill.getButton(BTN_A);
-    
+
     if (!lastUpState && newUpState)
     {
       gameHostSelection++;
@@ -435,9 +464,9 @@ void mainLoop()
   }
 
   Cytrill.loop();
-  
+
   // Necessary for some reason, value found by empiric studies
-  delayMicroseconds(3000);
+  delayMicroseconds(2000);
 }
 
 void loop()
@@ -451,4 +480,3 @@ void loop()
     mainLoop();
   }
 }
-
