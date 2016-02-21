@@ -3,6 +3,8 @@
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <EEPROM.h>
+#include <ESP8266mDNS.h>
+#include <ArduinoOTA.h>
 
 #define CMD_KEEP_ALIVE      0x10
 #define CMD_BUTTONS_CHANGED 0x11
@@ -21,6 +23,9 @@
 #define MAX_GAME_HOSTS      10
 
 #define KEEP_ALIVE_INTERVAL 4000
+
+#define HOSTNAME            "cytrill"
+#define OTA_PASSWORD        "bugsbunny"
 
 #define DEBUG
 
@@ -99,6 +104,7 @@ void setupWifi()
   Serial.println(essid);
 #endif
 
+  WiFi.hostname(HOSTNAME);
   WiFi.begin(essid, password);
 
   while (WiFi.status() != WL_CONNECTED)
@@ -239,8 +245,53 @@ void setup()
 {
   Serial.begin(115200);
   EEPROM.begin(512);
-  Cytrill.begin();
 
+#ifdef DEBUG
+  ArduinoOTA.onStart([]()
+  {
+    Serial.println("Starting OTA updates...");
+  });
+  ArduinoOTA.onEnd([]()
+  {
+    Serial.println("Stopping OTA updates...");
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total)
+  {
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error)
+  {
+    Serial.printf("Error[%u]: ", error);
+
+    if (error == OTA_AUTH_ERROR)
+    {
+      Serial.println("Authentication failed!");
+    }
+    else if (error == OTA_BEGIN_ERROR)
+    {
+      Serial.println("Begin failed!");
+    }
+    else if (error == OTA_CONNECT_ERROR)
+    {
+      Serial.println("Connect Failed");
+    }
+    else if (error == OTA_RECEIVE_ERROR)
+    {
+      Serial.println("Receive Failed");
+    }
+    else if (error == OTA_END_ERROR)
+    {
+      Serial.println("End Failed");
+    }
+  });
+#endif DEBUG
+
+  ArduinoOTA.setHostname(HOSTNAME);
+  ArduinoOTA.setPassword(OTA_PASSWORD);
+
+  ArduinoOTA.begin();
+
+  Cytrill.begin();
   Cytrill.setLed(LED_0, 0x00, 0x00, 0x00, 31);
   Cytrill.setLed(LED_1, 0x00, 0x00, 0x00, 31);
 
@@ -354,6 +405,8 @@ void mainLoop()
   static bool lastAState = false;
 
   static int gameHostSelection = 0;
+
+  ArduinoOTA.handle();
 
   if (WiFi.status() == WL_DISCONNECTED)
   {
