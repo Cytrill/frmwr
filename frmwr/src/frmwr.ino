@@ -251,14 +251,17 @@ void setup()
   {
     Serial.println("Starting OTA updates...");
   });
+
   ArduinoOTA.onEnd([]()
   {
     Serial.println("Stopping OTA updates...");
   });
+
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total)
   {
     Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
   });
+  
   ArduinoOTA.onError([](ota_error_t error)
   {
     Serial.printf("Error[%u]: ", error);
@@ -273,25 +276,25 @@ void setup()
     }
     else if (error == OTA_CONNECT_ERROR)
     {
-      Serial.println("Connect Failed");
+      Serial.println("Connect failed!");
     }
     else if (error == OTA_RECEIVE_ERROR)
     {
-      Serial.println("Receive Failed");
+      Serial.println("Receive failed!");
     }
     else if (error == OTA_END_ERROR)
     {
-      Serial.println("End Failed");
+      Serial.println("End failed!");
     }
   });
 #endif DEBUG
 
   ArduinoOTA.setHostname(HOSTNAME);
   ArduinoOTA.setPassword(OTA_PASSWORD);
-
   ArduinoOTA.begin();
 
   Cytrill.begin();
+
   Cytrill.setLed(LED_0, 0x00, 0x00, 0x00, 31);
   Cytrill.setLed(LED_1, 0x00, 0x00, 0x00, 31);
 
