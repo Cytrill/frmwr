@@ -1,7 +1,15 @@
 #include "Ctrl.h"
 
 Ctrl::Ctrl()
-    : _buttonCallback(NULL),
+    : _buttonsCallback(NULL),
+      _buttonUpCallback(NULL),
+      _buttonRightCallback(NULL),
+      _buttonDownCallback(NULL),
+      _buttonLeftCallback(NULL),
+      _buttonXCallback(NULL),
+      _buttonACallback(NULL),
+      _buttonBCallback(NULL),
+      _buttonYCallback(NULL),
       _bounceCounter{ 0, },
       _buttons{ false, },
       _leds{ 0x00, }
@@ -70,14 +78,94 @@ void Ctrl::end()
     SPI.end();
 }
 
-void Ctrl::registerButtonCallback(void (*callback)(int, bool))
+void Ctrl::registerButtonsCallback(const std::function<void (int, bool)> &callback)
 {
-    _buttonCallback = callback;
+    _buttonsCallback = callback;
+}
+
+void Ctrl::registerButtonUpCallback(const std::function<void (bool)> &callback)
+{
+    _buttonUpCallback = callback;
+}
+
+void Ctrl::registerButtonRightCallback(const std::function<void (bool)> &callback)
+{
+    _buttonRightCallback = callback;
+}
+
+void Ctrl::registerButtonDownCallback(const std::function<void (bool)> &callback)
+{
+    _buttonDownCallback = callback;
+}
+
+void Ctrl::registerButtonLeftCallback(const std::function<void (bool)> &callback)
+{
+    _buttonLeftCallback = callback;
+}
+
+void Ctrl::registerButtonXCallback(const std::function<void (bool)> &callback)
+{
+    _buttonXCallback = callback;
+}
+
+void Ctrl::registerButtonACallback(const std::function<void (bool)> &callback)
+{
+    _buttonACallback = callback;
+}
+
+void Ctrl::registerButtonBCallback(const std::function<void (bool)> &callback)
+{
+    _buttonBCallback = callback;
+}
+
+void Ctrl::registerButtonYCallback(const std::function<void (bool)> &callback)
+{
+    _buttonYCallback = callback;
 }
 
 bool Ctrl::getButton(int button)
 {
     return _buttons[button];
+}
+
+bool Ctrl::getButtonUp()
+{
+    return _buttons[BTN_UP];
+}
+
+bool Ctrl::getButtonRight()
+{
+    return _buttons[BTN_RIGHT];
+}
+
+bool Ctrl::getButtonDown()
+{
+    return _buttons[BTN_DOWN];
+}
+
+bool Ctrl::getButtonLeft()
+{
+    return _buttons[BTN_LEFT];
+}
+
+bool Ctrl::getButtonX()
+{
+    return _buttons[BTN_X];
+}
+
+bool Ctrl::getButtonA()
+{
+    return _buttons[BTN_A];
+}
+
+bool Ctrl::getButtonB()
+{
+    return _buttons[BTN_B];
+}
+
+bool Ctrl::getButtonY()
+{
+    return _buttons[BTN_Y];
 }
 
 int Ctrl::getButtons()
@@ -105,6 +193,16 @@ void Ctrl::setLed(int led, byte red, byte green, byte blue, byte brightness)
     SPI.writeBytes(APA102_START_FRAME, sizeof (APA102_START_FRAME));
     SPI.writeBytes(_leds, sizeof(_leds));
     SPI.writeBytes(APA102_END_FRAME, sizeof (APA102_END_FRAME));
+}
+
+void Ctrl::setLedLeft(byte red, byte green, byte blue, byte brightness)
+{
+    setLed(LED_LEFT, red, green, blue, brightness);
+}
+
+void Ctrl::setLedRight(byte red, byte green, byte blue, byte brightness)
+{
+    setLed(LED_RIGHT, red, green, blue, brightness);
 }
 
 void Ctrl::setLeds(byte leds[])
@@ -211,16 +309,49 @@ void Ctrl::debounceButton(int button, int newValue)
     }
     else
     {
-        _bounceCounter[button] = max(1, _bounceCounter[button]) - 1;
+        _bounceCounter[button] = std::max(1, _bounceCounter[button]) - 1;
     }
 
     if (_bounceCounter[button] == 1)
     {
         _buttons[button] = newState;
 
-        if (_buttonCallback != NULL)
+        if (_buttonsCallback != NULL)
         {
-            _buttonCallback(button, newState);
+            _buttonsCallback(button, newState);
+        }
+
+        if (button == BTN_UP && _buttonUpCallback != NULL)
+        {
+            _buttonUpCallback(newState);
+        }
+        else if (button == BTN_RIGHT && _buttonRightCallback != NULL)
+        {
+            _buttonRightCallback(newState);
+        }
+        else if (button == BTN_DOWN && _buttonDownCallback != NULL)
+        {
+            _buttonDownCallback(newState);
+        }
+        else if (button == BTN_LEFT && _buttonLeftCallback != NULL)
+        {
+            _buttonLeftCallback(newState);
+        }
+        else if (button == BTN_X && _buttonXCallback != NULL)
+        {
+            _buttonXCallback(newState);
+        }
+        else if (button == BTN_A && _buttonACallback != NULL)
+        {
+            _buttonACallback(newState);
+        }
+        else if (button == BTN_B && _buttonBCallback != NULL)
+        {
+            _buttonBCallback(newState);
+        }
+        else if (button == BTN_Y && _buttonYCallback != NULL)
+        {
+            _buttonYCallback(newState);
         }
     }
 }

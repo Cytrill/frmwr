@@ -9,8 +9,8 @@
 #define CMD_KEEP_ALIVE      0x10
 #define CMD_BUTTONS_CHANGED 0x11
 
-#define CMD_SET_LED_0       0x20
-#define CMD_SET_LED_1       0x21
+#define CMD_SET_LED_LEFT    0x20
+#define CMD_SET_LED_RIGHT   0x21
 
 #define CMD_PROPAGATE_HOST  0x30
 #define CMD_ASK_HOST        0x31
@@ -27,15 +27,27 @@
 #define HOSTNAME            "cytrill"
 #define OTA_PASSWORD        "bugsbunny"
 
+#define CONFIG_MODE         0
+#define SIMON_MODE          1
+#define CONTROLLER_MODE     2
+
 #define DEBUG
 
-bool configMode = false;
+int runMode = CONTROLLER_MODE;
 
-char essid[ESSID_LENGTH] = "";
-char password[PASSWORD_LENGTH] = "";
+// Simon mode
+int pattern[32] = { 0, };
+int correctPresses = 0;
+int level = 1;
+int mode = 0;
 
+// Configure Mode
 char tmpESSID[ESSID_LENGTH] = "";
 char tmpPassword[PASSWORD_LENGTH] = "";
+
+// Controller mode
+char essid[ESSID_LENGTH] = "";
+char password[PASSWORD_LENGTH] = "";
 
 uint32_t currentGameHost = 0;
 const int gamePort = 1337;
@@ -43,6 +55,7 @@ const int gamePort = 1337;
 int gameHostCounter = 0;
 uint32_t gameHosts[MAX_GAME_HOSTS] = { 0, };
 byte gameHostColors[MAX_GAME_HOSTS][4] = { { 0, 0, 0 }, };
+int gameHostSelection = 0;
 
 WiFiClient client;
 WiFiUDP udp;
@@ -165,8 +178,8 @@ void updateHostSelectionColor(int gameHostSelection)
   byte b = gameHostColors[gameHostSelection][2];
   byte brightness = gameHostColors[gameHostSelection][3];
 
-  Cytrill.setLed(LED_0, r, g, b, brightness);
-  Cytrill.setLed(LED_1, r, g, b, brightness);
+  Cytrill.setLedLeft(r, g, b, brightness);
+  Cytrill.setLedRight(r, g, b, brightness);
 }
 
 void sendMessage(char message[])
@@ -228,6 +241,71 @@ bool receiveMessage(char *buffer, uint32_t *remoteIP)
   return false;
 }
 
+void resetSimon()
+{
+  for (int i = 0; i < 32; i++)
+  {
+    pattern[i] = random(0, 4);
+  }
+}
+
+void simonSetup()
+{
+  resetSimon();
+
+  Cytrill.registerButtonRightCallback([](bool pressed)
+  {
+    if (mode == 0)
+    {
+      mode = 1;
+    }
+  });
+
+  Cytrill.registerButtonsCallback([](int button, bool pressed)
+  {
+    if (pressed && mode == 3)
+    {
+      if ((button == BTN_X && pattern[correctPresses] == 0) ||
+          (button == BTN_A && pattern[correctPresses] == 1) ||
+          (button == BTN_B && pattern[correctPresses] == 2) ||
+          (button == BTN_Y && pattern[correctPresses] == 3))
+      {
+        correctPresses++;
+
+        if (correctPresses == level)
+        {
+          Cytrill.setLedLeft(0xFF, 0xFF, 0xFF, level);
+
+          level++;
+
+          correctPresses = 0;
+          mode = 0;
+
+          if (level == 20)
+          {
+            Cytrill.setLedLeft(0x00, 0x00, 0xFF, 31);
+
+            resetSimon();
+
+            level = 1;
+          }
+        }
+      }
+      else
+      {
+        Cytrill.setLedLeft(0xFF, 0xFF, 0xFF, 0);
+
+        resetSimon();
+
+        level = 1;
+
+        correctPresses = 0;
+        mode = 0;
+      }
+    }
+  });
+}
+
 void configureSetup()
 {
   readWirelessConfig(essid, password);
@@ -237,6 +315,47 @@ void mainSetup()
 {
   setupWifi();
   udp.begin(gamePort);
+
+  Cytrill.registerButtonUpCallback([](bool pressed)
+  {
+    if (currentGameHost == 0 && pressed)
+    {
+      gameHostSelection++;
+
+      if (gameHostSelection >= gameHostCounter)
+      {
+        gameHostSelection = 0;
+      }
+
+      updateHostSelectionColor(gameHostSelection);
+    }
+  });
+
+  Cytrill.registerButtonDownCallback([](bool pressed)
+  {
+    if (currentGameHost == 0 && pressed)
+    {
+      gameHostSelection--;
+
+      if (gameHostSelection < 0)
+      {
+        gameHostSelection = gameHostCounter == 0 ? 0 : gameHostCounter - 1;
+      }
+
+      updateHostSelectionColor(gameHostSelection);
+    }
+  });
+
+  Cytrill.registerButtonACallback([](bool pressed)
+  {
+    if (currentGameHost == 0 && pressed)
+    {
+      currentGameHost = gameHosts[gameHostSelection];
+
+      Cytrill.setLedLeft(0x00, 0x00, 0x00, 31);
+      Cytrill.setLedRight(0x00, 0x00, 0x00, 31);
+    }
+  });
 
   delay(100);
 }
@@ -261,7 +380,7 @@ void setup()
   {
     Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
   });
-  
+
   ArduinoOTA.onError([](ota_error_t error)
   {
     Serial.printf("Error[%u]: ", error);
@@ -295,19 +414,31 @@ void setup()
 
   Cytrill.begin();
 
-  Cytrill.setLed(LED_0, 0x00, 0x00, 0x00, 31);
-  Cytrill.setLed(LED_1, 0x00, 0x00, 0x00, 31);
+  Cytrill.setLedLeft(0x00, 0x00, 0x00, 31);
+  Cytrill.setLedRight(0x00, 0x00, 0x00, 31);
 
   delay(100);
 
-  Cytrill.loop(10);
+  Cytrill.loop(50);
 
-  if (Cytrill.getButton(BTN_DOWN))
+  if (Cytrill.getButton(BTN_RIGHT))
   {
-    configMode = true;
+    runMode = SIMON_MODE;
+  }
+  else if (Cytrill.getButton(BTN_DOWN))
+  {
+    runMode = CONFIG_MODE;
+  }
+  else
+  {
+    runMode = CONTROLLER_MODE;
   }
 
-  if (configMode)
+  if (runMode == SIMON_MODE)
+  {
+    simonSetup();
+  }
+  else if (runMode == CONFIG_MODE)
   {
     configureSetup();
   }
@@ -315,6 +446,60 @@ void setup()
   {
     mainSetup();
   }
+}
+
+void simonLoop()
+{
+  static int playedColor = 0;
+  static long lastTime = 0;
+
+  if (mode == 1)
+  {
+    if (playedColor == level)
+    {
+      Cytrill.setLedRight(0x00, 0x00, 0x00, 6);
+
+      playedColor = 0;
+      mode = 3;
+    }
+    else if (millis() - lastTime > 100)
+    {
+      lastTime = millis();
+
+      if (pattern[playedColor] == 0)
+      {
+        Cytrill.setLedRight(0x00, 0x00, 0xFF, 8);
+      }
+      else if (pattern[playedColor] == 1)
+      {
+        Cytrill.setLedRight(0xFF, 0x00, 0x00, 8);
+      }
+      else if (pattern[playedColor] == 2)
+      {
+        Cytrill.setLedRight(0xFF, 0xFF, 0x00, 8);
+      }
+      else if (pattern[playedColor] == 3)
+      {
+        Cytrill.setLedRight(0x00, 0xFF, 0x00, 8);
+      }
+
+      playedColor++;
+      mode = 2;
+    }
+  }
+  else if (mode == 2)
+  {
+    if (millis() - lastTime > 600)
+    {
+      lastTime = millis();
+
+      Cytrill.setLedRight(0x00, 0x00, 0x00, 6);
+
+      mode = 1;
+    }
+  }
+
+  Cytrill.loop();
 }
 
 void configureLoop()
@@ -403,12 +588,6 @@ void mainLoop()
 {
   static int lastKeepAlive = 0;
 
-  static bool lastUpState = false;
-  static bool lastDownState = false;
-  static bool lastAState = false;
-
-  static int gameHostSelection = 0;
-
   ArduinoOTA.handle();
 
   if (WiFi.status() == WL_DISCONNECTED)
@@ -422,49 +601,6 @@ void mainLoop()
 
   int newButtonStates = Cytrill.getButtons();
 
-  if (currentGameHost == 0)
-  {
-    bool newUpState = Cytrill.getButton(BTN_UP);
-    bool newDownState = Cytrill.getButton(BTN_DOWN);
-    bool newAState = Cytrill.getButton(BTN_A);
-
-    if (!lastUpState && newUpState)
-    {
-      gameHostSelection++;
-
-      if (gameHostSelection >= gameHostCounter)
-      {
-        gameHostSelection = 0;
-      }
-
-      updateHostSelectionColor(gameHostSelection);
-    }
-
-    if (!lastDownState && newDownState)
-    {
-      gameHostSelection--;
-
-      if (gameHostSelection < 0)
-      {
-        gameHostSelection = gameHostCounter == 0 ? 0 : gameHostCounter - 1;
-      }
-
-      updateHostSelectionColor(gameHostSelection);
-    }
-
-    if (!lastAState && newAState)
-    {
-      currentGameHost = gameHosts[gameHostSelection];
-
-      Cytrill.setLed(LED_0, 0x00, 0x00, 0x00, 31);
-      Cytrill.setLed(LED_1, 0x00, 0x00, 0x00, 31);
-    }
-
-    lastUpState = newUpState;
-    lastDownState = newDownState;
-    lastAState = newAState;
-  }
-
   if (receiveMessage(msgBuffer, &remoteIP))
   {
     // Some sanity check
@@ -472,12 +608,12 @@ void mainLoop()
     {
       switch (msgBuffer[0])
       {
-        case CMD_SET_LED_0:
-          Cytrill.setLed(LED_0, msgBuffer[1], msgBuffer[2], msgBuffer[3], msgBuffer[4]);
+        case CMD_SET_LED_LEFT:
+          Cytrill.setLedLeft(msgBuffer[1], msgBuffer[2], msgBuffer[3], msgBuffer[4]);
           break;
 
-        case CMD_SET_LED_1:
-          Cytrill.setLed(LED_1, msgBuffer[1], msgBuffer[2], msgBuffer[3], msgBuffer[4]);
+        case CMD_SET_LED_RIGHT:
+          Cytrill.setLedRight(msgBuffer[1], msgBuffer[2], msgBuffer[3], msgBuffer[4]);
           break;
 
         case CMD_PROPAGATE_HOST:
@@ -527,7 +663,11 @@ void mainLoop()
 
 void loop()
 {
-  if (configMode)
+  if (runMode == SIMON_MODE)
+  {
+    simonLoop();
+  }
+  else if (runMode == CONFIG_MODE)
   {
     configureLoop();
   }

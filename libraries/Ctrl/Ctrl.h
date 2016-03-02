@@ -9,11 +9,12 @@
 
 #include <Arduino.h>
 #include <stdint.h>
+#include <functional>
 #include "SPI.h"
 #include "esp8266_peri.h"
 
 #define NUM_LEDS 2
-#define BOUNCING_TIME 10
+#define BOUNCING_TIME 5
 
 /********************************************
  ***     ____________________________     ***
@@ -45,8 +46,8 @@
 #define BTN_B_MASK     0x40
 #define BTN_Y_MASK     0x80
 
-#define LED_0          1
-#define LED_1          0
+#define LED_LEFT       1
+#define LED_RIGHT      0
 
 #define ADC_PIN        A0
 
@@ -65,12 +66,30 @@ public:
     void begin(int);
     void end();
 
-    void registerButtonCallback(void (*)(int, bool));
+    void registerButtonsCallback(const std::function<void (int, bool)> &);
+    void registerButtonUpCallback(const std::function<void (bool)> &);
+    void registerButtonRightCallback(const std::function<void (bool)> &);
+    void registerButtonDownCallback(const std::function<void (bool)> &);
+    void registerButtonLeftCallback(const std::function<void (bool)> &);
+    void registerButtonXCallback(const std::function<void (bool)> &);
+    void registerButtonACallback(const std::function<void (bool)> &);
+    void registerButtonBCallback(const std::function<void (bool)> &);
+    void registerButtonYCallback(const std::function<void (bool)> &);
 
     bool getButton(int);
+    bool getButtonUp();
+    bool getButtonRight();
+    bool getButtonDown();
+    bool getButtonLeft();
+    bool getButtonX();
+    bool getButtonA();
+    bool getButtonB();
+    bool getButtonY();
     int getButtons();
 
     void setLed(int, byte, byte, byte, byte);
+    void setLedLeft(byte, byte, byte, byte);
+    void setLedRight(byte, byte, byte, byte);
     void setLeds(byte[]);
 
     void loop();
@@ -83,7 +102,16 @@ private:
     byte APA102_START_FRAME[4] = { 0x00, };
     byte APA102_END_FRAME[4] = { 0xFF, };
 
-    void (*_buttonCallback)(int, bool);
+    std::function<void (int, bool)> _buttonsCallback;
+
+    std::function<void (bool)> _buttonUpCallback;
+    std::function<void (bool)> _buttonRightCallback;
+    std::function<void (bool)> _buttonDownCallback;
+    std::function<void (bool)> _buttonLeftCallback;
+    std::function<void (bool)> _buttonXCallback;
+    std::function<void (bool)> _buttonACallback;
+    std::function<void (bool)> _buttonBCallback;
+    std::function<void (bool)> _buttonYCallback;
 
     int _bounceCounter[8];
     bool _buttons[8];
