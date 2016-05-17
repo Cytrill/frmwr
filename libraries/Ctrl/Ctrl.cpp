@@ -229,7 +229,7 @@ void Ctrl::loop()
 
     float vADC = float(adcValue) * (vADCMax / adcValueMax);
 
-    int i = int((r1 * vADC) / (r0 * (vCC - vADC)) + 0.5f);
+    int i = int((r1 * vADC) / (r0 * (vCC - vADC)) + 0.25f);
 
     btnUp = bool(i & 0x01) ? LOW : HIGH;
     btnRight = bool(i & 0x04) ? LOW : HIGH;

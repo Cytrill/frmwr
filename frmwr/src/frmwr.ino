@@ -10,7 +10,7 @@
 #include "Configuration.hpp"
 #include "Controller.hpp"
 
-#define HOSTNAME            "cytrill"
+#define HOSTNAME            "cytrill-5"
 #define OTA_PASSWORD        "bugsbunny"
 
 #define CONFIG_MODE         0
@@ -68,6 +68,13 @@ void setup()
 
     Cytrill.loop(100);
 
+    bool setName = false;
+
+    if (Cytrill.getButton(BTN_UP))
+    {
+        setName = true;
+    }
+
     if (Cytrill.getButton(BTN_RIGHT))
     {
         runMode = SIMON_MODE;
@@ -92,9 +99,14 @@ void setup()
     {
         simon.setup();
     }
-    else
+    else if (runMode == CONTROLLER_MODE)
     {
         controller.setup();
+
+        if (setName)
+        {
+            controller.sendSetName();
+        }
     }
 
     if (runMode != CONFIG_MODE)

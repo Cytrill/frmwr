@@ -3,6 +3,7 @@
 Controller::Controller()
     : _currentGameHost(0),
       _gamePort(1337),
+      _nsPort(1338),
       _gameHostCounter(0),
       _gameHosts{ 0, },
       _gameHostColors{ { 0, 0, 0 }, },
@@ -155,6 +156,50 @@ void Controller::sendAskHost()
     _udp.endPacket();
 }
 
+void Controller::sendSetName()
+{
+#ifdef DEBUG
+    Serial.println("Requesting the nameserver to set a name.");
+#endif
+
+    IPAddress broadcast = WiFi.localIP();
+    broadcast[3] = 255;
+
+    char setName[] = { CMD_SET_NAME, 0x00, 0x00, 0x00, 0x00, CMD_SET_NAME };
+
+    _udp.beginPacket(broadcast, _nsPort);
+    _udp.write(setName, MSG_SIZE);
+    _udp.endPacket();
+}
+
+void Controller::sendButtonsChanged(int newButtonStates)
+{
+    char message[] = {
+        CMD_BUTTONS_CHANGED,
+        char(newButtonStates & 0xFF),
+        char((newButtonStates ^ _buttonStates) & 0xFF),
+        0x00,
+        0x00,
+        CMD_BUTTONS_CHANGED
+    };
+
+    sendMessage(message);
+}
+
+void Controller::sendKeepAlive()
+{
+    char message[] = {
+        CMD_KEEP_ALIVE,
+        char(_buttonStates & 0xFF),
+        0x00,
+        0x00,
+        0x00,
+        CMD_KEEP_ALIVE
+    };
+
+    sendMessage(message);
+}
+
 void Controller::addHostToList(uint32_t gameHost, byte r, byte g, byte b, byte brightness)
 {
     for (int i = 0; i < MAX_GAME_HOSTS; i++)
@@ -202,34 +247,6 @@ void Controller::sendMessage(char message[])
     _udp.beginPacket(_currentGameHost, _gamePort);
     _udp.write(message, MSG_SIZE);
     _udp.endPacket();
-}
-
-void Controller::sendButtonsChanged(int newButtonStates)
-{
-    char message[] = {
-        CMD_BUTTONS_CHANGED,
-        char(newButtonStates & 0xFF),
-        char((newButtonStates ^ _buttonStates) & 0xFF),
-        0x00,
-        0x00,
-        CMD_BUTTONS_CHANGED
-    };
-
-    sendMessage(message);
-}
-
-void Controller::sendKeepAlive()
-{
-    char message[] = {
-        CMD_KEEP_ALIVE,
-        char(_buttonStates & 0xFF),
-        0x00,
-        0x00,
-        0x00,
-        CMD_KEEP_ALIVE
-    };
-
-    sendMessage(message);
 }
 
 bool Controller::receiveMessage(char *buffer, uint32_t *remoteIP)

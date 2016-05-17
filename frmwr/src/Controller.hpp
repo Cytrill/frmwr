@@ -1,6 +1,8 @@
 #ifndef CONTROLLER_HPP
 #define CONTROLLER_HPP
 
+#define DEBUG
+
 #include <Arduino.h>
 #include <SPI.h>
 #include <ESP8266WiFi.h>
@@ -15,6 +17,8 @@
 
 #define CMD_PROPAGATE_HOST  0x30
 #define CMD_ASK_HOST        0x31
+
+#define CMD_SET_NAME        0x40
 
 #define MSG_SIZE            6
 
@@ -31,18 +35,21 @@ public:
     void setup();
     void loop();
 
-private:
     void sendAskHost();
+    void sendSetName();
+    void sendButtonsChanged(int newButtonStates);
+    void sendKeepAlive();
+
+private:
     void addHostToList(uint32_t gameHost, byte r, byte g, byte b, byte brightness);
     void updateHostSelectionColor();
     void sendMessage(char message[]);
-    void sendButtonsChanged(int newButtonStates);
-    void sendKeepAlive();
     bool receiveMessage(char *buffer, uint32_t *remoteIP);
 
 private:
     uint32_t _currentGameHost;
     int _gamePort;
+    int _nsPort;
 
     int _gameHostCounter;
     uint32_t _gameHosts[MAX_GAME_HOSTS];
