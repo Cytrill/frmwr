@@ -134,6 +134,28 @@ void Controller::loop()
         lastKeepAlive = millis();
     }
 
+
+    if (_gameHostCounter == 0)
+    {
+        static int i = 1;
+        static int direction = 1;
+        static int led = 1;
+
+        Cytrill.setLed(led, 0, 0, i, 10);
+
+        if (i == 0)
+        {
+            led = (led + 1) % 2;
+            direction = 1;
+        }
+        else if (i == 255)
+        {
+            direction = -1;
+        }
+
+        i += direction;
+    }
+
     Cytrill.loop();
 
     // Necessary for some reason, value found by empiric studies
