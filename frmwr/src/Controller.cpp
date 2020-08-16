@@ -96,7 +96,7 @@ void Controller::loop()
                     break;
 
                 case CMD_PROPAGATE_HOST:
-#ifdef DEBUG
+#ifdef DEBUG_CYTRILL
                     Serial.print("Game host propagated itself: ");
                     Serial.print(remoteIP & 0xFF); Serial.print(".");
                     Serial.print((remoteIP >> 8) & 0xFF); Serial.print(".");
@@ -164,14 +164,18 @@ void Controller::loop()
 
 void Controller::sendAskHost()
 {
-#ifdef DEBUG
+#ifdef DEBUG_CYTRILL
     Serial.println("Asking for a game host in the network.");
 #endif
 
     IPAddress broadcast = WiFi.localIP();
     broadcast[3] = 255;
-
+    #ifdef ARDUINO_ESP8266_NODEMCU
     char askHost[] = { CMD_ASK_HOST, 0x00, 0x00, 0x00, 0x00, CMD_ASK_HOST };
+    #elif defined ARDUINO_ESP32_DEV
+    uint8_t askHost[] = { CMD_ASK_HOST, 0x00, 0x00, 0x00, 0x00, CMD_ASK_HOST };
+    #endif
+
 
     _udp.beginPacket(broadcast, _gamePort);
     _udp.write(askHost, MSG_SIZE);
@@ -180,14 +184,17 @@ void Controller::sendAskHost()
 
 void Controller::sendSetName()
 {
-#ifdef DEBUG
+#ifdef DEBUG_CYTRILL
     Serial.println("Requesting the nameserver to set a name.");
 #endif
 
     IPAddress broadcast = WiFi.localIP();
     broadcast[3] = 255;
-
+#ifdef ARDUINO_ESP8266_NODEMCU
     char setName[] = { CMD_SET_NAME, 0x00, 0x00, 0x00, 0x00, CMD_SET_NAME };
+#elif defined ARDUINO_ESP32_DEV
+    unsigned char setName[] = { CMD_SET_NAME, 0x00, 0x00, 0x00, 0x00, CMD_SET_NAME };
+#endif
 
     _udp.beginPacket(broadcast, _nsPort);
     _udp.write(setName, MSG_SIZE);
@@ -196,7 +203,11 @@ void Controller::sendSetName()
 
 void Controller::sendButtonsChanged(int newButtonStates)
 {
+    #ifdef ARDUINO_ESP8266_NODEMCU
     char message[] = {
+    #elif defined ARDUINO_ESP32_DEV
+    unsigned char message[] = {
+    #endif
         CMD_BUTTONS_CHANGED,
         char(newButtonStates & 0xFF),
         char((newButtonStates ^ _buttonStates) & 0xFF),
@@ -210,7 +221,11 @@ void Controller::sendButtonsChanged(int newButtonStates)
 
 void Controller::sendKeepAlive()
 {
+    #ifdef ARDUINO_ESP8266_NODEMCU
     char message[] = {
+    #elif defined ARDUINO_ESP32_DEV
+    unsigned char message[] = {
+    #endif
         CMD_KEEP_ALIVE,
         char(_buttonStates & 0xFF),
         0x00,
@@ -252,10 +267,14 @@ void Controller::updateHostSelectionColor()
     Cytrill.setLedLeft(r, g, b, brightness);
     Cytrill.setLedRight(r, g, b, brightness);
 }
-
+#ifdef ARDUINO_ESP8266_NODEMCU
 void Controller::sendMessage(char message[])
+
+#elif defined ARDUINO_ESP32_DEV
+void Controller::sendMessage(unsigned char message[])
+#endif
 {
-#ifdef DEBUG
+#ifdef DEBUG_CYTRILL
     Serial.print("Sending data: ");
 
     for (int i = 0; i < MSG_SIZE; i++)

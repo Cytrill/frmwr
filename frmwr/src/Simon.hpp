@@ -2,7 +2,11 @@
 #define SIMON_HPP
 
 #include <Arduino.h>
-#include "Ctrl.h"
+#ifdef ARDUINO_ESP8266_NODEMCU
+  #include "Ctrl.h"
+#elif defined ARDUINO_ESP32_DEV
+  #include "Ctrl32.h"
+#endif
 
 class Simon
 {

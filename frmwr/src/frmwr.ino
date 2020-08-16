@@ -1,10 +1,18 @@
-#define DEBUG
+//#define DEBUG_CYTRILL
+//#define BTN_DEBUG
 
-#include "SPI.h"
-#include "Ctrl.h"
-#include <ESP8266WiFi.h>
+#ifdef ARDUINO_ESP8266_NODEMCU
+  #include <ESP8266WiFi.h>
+  #include <ESP8266mDNS.h>
+  #include "Ctrl.h"
+#elif defined ARDUINO_ESP32_DEV
+  #include <WiFi.h>
+  #include <ESPmDNS.h>
+  #include "Ctrl32.h"
+  #include "BlueHID.hpp"
+#endif
 #include <WiFiUdp.h>
-#include <ESP8266mDNS.h>
+
 #include <ArduinoOTA.h>
 #include "Simon.hpp"
 #include "Configuration.hpp"
@@ -16,6 +24,10 @@
 #define CONFIG_MODE         0
 #define SIMON_MODE          1
 #define CONTROLLER_MODE     2
+#define BLUETOOTH_MODE      3
+
+//#define DEBUG_CYTRILL
+//#define BTN_DEBUG
 
 int runMode = CONTROLLER_MODE;
 
@@ -28,26 +40,34 @@ Configuration configuration;
 // Controller mode
 Controller controller;
 
+#ifdef ARDUINO_ESP32_DEV
+    BlueHID bluetoothHID;
+#endif
+
 void setupWifi()
 {
-#ifdef DEBUG
+#ifdef DEBUG_CYTRILL
     Serial.print("Connecting to ");
     Serial.println(configuration.getEssid());
 #endif
 
-    WiFi.hostname(HOSTNAME);
+    #ifdef ARDUINO_ESP8266_NODEMCU
+      WiFi.hostname(HOSTNAME);
+    #elif defined ARDUINO_ESP32_DEV
+      WiFi.setHostname(HOSTNAME);
+    #endif
     WiFi.begin(configuration.getEssid(), configuration.getPassword());
 
     while (WiFi.status() != WL_CONNECTED)
     {
         delay(500);
 
-#ifdef DEBUG
+#ifdef DEBUG_CYTRILL
         Serial.print(".");
 #endif
     }
 
-#ifdef DEBUG
+#ifdef DEBUG_CYTRILL
     Serial.println("");
     Serial.println("WiFi connected");
     Serial.println("IP address: ");
@@ -83,6 +103,12 @@ void setup()
     {
         runMode = CONFIG_MODE;
     }
+#ifdef ARDUINO_ESP32_DEV
+    else if (Cytrill.getButton(BTN_X))
+    {
+        runMode = BLUETOOTH_MODE;
+    }
+#endif
     else
     {
         runMode = CONTROLLER_MODE;
@@ -90,15 +116,23 @@ void setup()
 
     configuration.setup();
 
-    if (runMode != CONFIG_MODE)
+
+    if (runMode != CONFIG_MODE && runMode != BLUETOOTH_MODE) //Simon mode need also no Wifi, but reset at moment.
     {
         setupWifi();
     }
 
     if (runMode == SIMON_MODE)
     {
+        
         simon.setup();
     }
+#ifdef ARDUINO_ESP32_DEV
+    if (runMode == BLUETOOTH_MODE)
+    {
+        bluetoothHID.setup();
+    }
+#endif
     else if (runMode == CONTROLLER_MODE)
     {
         controller.setup();
@@ -111,7 +145,7 @@ void setup()
 
     if (runMode != CONFIG_MODE)
     {
-#ifdef DEBUG
+#ifdef DEBUG_CYTRILL
         ArduinoOTA.onStart([]()
         {
             Serial.println("Starting OTA updates...");
@@ -152,19 +186,20 @@ void setup()
                 Serial.println("End failed!");
             }
         });
-#endif DEBUG
-
+#endif
+/*
         ArduinoOTA.setHostname(HOSTNAME);
         ArduinoOTA.setPassword(OTA_PASSWORD);
-        ArduinoOTA.begin();
+        ArduinoOTA.begin();*/
     }
 }
 
 void loop()
 {
+    /*
     ArduinoOTA.handle();
-
-    if (WiFi.status() == WL_DISCONNECTED && runMode != CONFIG_MODE)
+*/
+    if (WiFi.status() == WL_DISCONNECTED && runMode != (CONFIG_MODE || BLUETOOTH_MODE))
     {
         setupWifi();
     }
@@ -173,6 +208,12 @@ void loop()
     {
         simon.loop();
     }
+#ifdef ARDUINO_ESP32_DEV
+    else if (runMode == BLUETOOTH_MODE)
+    {
+        bluetoothHID.loop();
+    }
+#endif
     else if (runMode == CONFIG_MODE)
     {
         configuration.loop();

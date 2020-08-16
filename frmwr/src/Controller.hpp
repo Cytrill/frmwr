@@ -1,13 +1,18 @@
 #ifndef CONTROLLER_HPP
 #define CONTROLLER_HPP
 
-#define DEBUG
+//#define DEBUG
 
 #include <Arduino.h>
 #include <SPI.h>
-#include <ESP8266WiFi.h>
+#ifdef ARDUINO_ESP8266_NODEMCU
+  #include <ESP8266WiFi.h>
+  #include "Ctrl.h"
+#elif defined ARDUINO_ESP32_DEV
+  #include <WiFi.h>
+  #include "Ctrl32.h"
+#endif
 #include <WiFiUdp.h>
-#include "Ctrl.h"
 
 #define CMD_KEEP_ALIVE      0x10
 #define CMD_BUTTONS_CHANGED 0x11
@@ -43,7 +48,12 @@ public:
 private:
     void addHostToList(uint32_t gameHost, byte r, byte g, byte b, byte brightness);
     void updateHostSelectionColor();
+    #ifdef ARDUINO_ESP8266_NODEMCU
     void sendMessage(char message[]);
+    #elif defined ARDUINO_ESP32_DEV
+    void sendMessage(unsigned char message[]);
+    #endif
+    
     bool receiveMessage(char *buffer, uint32_t *remoteIP);
 
 private:
